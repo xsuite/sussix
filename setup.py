@@ -17,37 +17,34 @@ extensions = []
 # Setup #
 #########
 
-version_file = Path(__file__).parent / 'xpart/_version.py'
+version_file = Path(__file__).parent / 'sussix/_version.py'
 dd = {}
 with open(version_file.absolute(), 'r') as fp:
     exec(fp.read(), dd)
 __version__ = dd['__version__']
 
 setup(
-    name='xpart',
+    name='sussix',
     version=__version__,
-    description='Generation of Particle Ensembles',
-    long_description=('Tools for the generation of particle ensembles'
-                'in beam dynamics simulations.\n\n'
-                'This package is part of the Xsuite collection.'),
-    url='https://xsuite.readthedocs.io/',
+    description='Sussix algorith for frequency analysis',
+    long_description=('Sussix algorith for frequency analysis'),
+    #url='https://xsuite.readthedocs.io/',
     packages=find_packages(),
     ext_modules=extensions,
     include_package_data=True,
     install_requires=[
         'numpy>=1.0',
-        'scipy',
-        'xobjects'
+        'pandas'
         ],
-    author='G. Iadarola et al.',
+    author='P. Belanger et al.',
     license='Apache 2.0',
-    download_url="https://pypi.python.org/pypi/xpart",
+    download_url="https://pypi.python.org/pypi/sussix",
     project_urls={
             "Bug Tracker": "https://github.com/xsuite/xsuite/issues",
-            "Documentation": 'https://xsuite.readthedocs.io/',
-            "Source Code": "https://github.com/xsuite/xpart",
+            # "Documentation": 'https://xsuite.readthedocs.io/',
+            "Source Code": "https://github.com/xsuite/sussix",
         },
     extras_require={
-        'tests': ['cpymad', 'PyHEADTAIL', 'pytest'],
+        'tests': ['pytest'],
         },
     )
