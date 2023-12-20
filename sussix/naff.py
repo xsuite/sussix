@@ -55,7 +55,7 @@ def fundamental_frequency(x,px,Hann_order = 1):
     return tune,amplitude
 
 
-def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1,optimization = 'fortran'):
+def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
     """
     Applies the NAFF algorithm to find the spectral lines of a signal.
     """
@@ -75,7 +75,7 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1,optimization = 'fortran'):
     for _ in range(number_of_harmonics):
 
         # Computing frequency and amplitude
-        freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order,optimization=optimization)
+        freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
 
         # Saving results
         frequencies.append(freq)
@@ -90,7 +90,7 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1,optimization = 'fortran'):
     return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
 
 
-def get_harmonics(x = None,px = None,y = None,py = None,zeta = None,pzeta = None,number_of_harmonics = 5,Hann_order = 1,optimization = 'fortran'):
+def get_harmonics(x = None,px = None,y = None,py = None,zeta = None,pzeta = None,number_of_harmonics = 5,Hann_order = 1):
     """
     Computes the spectrum of a tracking data set for all canonical pairs provided
     """
@@ -105,8 +105,7 @@ def get_harmonics(x = None,px = None,y = None,py = None,zeta = None,pzeta = None
 
             # Computing spectral lines
             df = NAFF(z,pz, number_of_harmonics = number_of_harmonics,
-                                Hann_order      = Hann_order,
-                                optimization    = optimization)
+                                Hann_order      = Hann_order)
             
             results[plane] = df
 
