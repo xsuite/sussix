@@ -34,7 +34,8 @@ setup(
     include_package_data=True,
     install_requires=[
         'numpy>=1.0',
-        'pandas'
+        'pandas',
+        'numba'
         ],
     author='P. Belanger et al.',
     license='Apache 2.0',

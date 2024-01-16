@@ -35,3 +35,22 @@ def find_linear_combinations(frequencies,fundamental_tunes = [],max_jklm = 10):
 
     return pd.DataFrame({'jklm':jklm,'err':err,'freq':frequencies})
 
+
+
+def generate_signal(amplitudes,frequencies,N):
+    """
+    Generate a signal with the provided amplitudes and frequencies over turns N.
+    """
+
+    if isinstance(amplitudes,(float,int)):
+        amplitudes = [amplitudes]
+    if isinstance(frequencies,(float,int)):
+        frequencies = [frequencies]
+
+    assert len(amplitudes) == len(frequencies), "Amplitudes and frequencies must have the same length"
+
+    signal = sum([A*np.exp(1j*(2*np.pi*(Q)*N  )) for A,Q in zip(amplitudes,frequencies)])
+    x  =  signal.real
+    px = -signal.imag
+
+    return x,px
