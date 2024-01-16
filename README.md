@@ -24,7 +24,8 @@ get_harmonics(  x     = None,
                 number_of_harmonics = 5,
                 Hann_order          = 1)
 #-------
-# -> returns df where df['x'] has the complex amplitudes (amplitude + phase) and frequencies in the x plane
+# ->    returns df where df['x'] has the complex amplitudes (amplitude + phase) 
+#       and frequencies in the x plane
 ``` 
 
 For each canonical pair, the spectrum of the data is computed using a NAFF approach and a well optimized solver to find the frequencies precisely. A Hann window is used to help with the convergence (see `sussix/windowing.py`) and the window order can be specified by the user. 
