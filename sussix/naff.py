@@ -65,6 +65,10 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
     # Converting to numpy arrays
     x,px = np.array(x),np.array(px)
 
+    # saving mean of the signal
+    x_0,px_0     = np.mean(x),np.mean(px)
+    was_centered = False
+
     # initialisation
     z  = x - 1j*px
     N  = np.arange(len(x))
@@ -76,6 +80,13 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
 
         # Computing frequency and amplitude
         freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
+
+        # Frequency close to 0 -> DC part of the signal, force to mean and 0 freq (only once)
+        if (np.abs(freq) < 1e-10) and (not was_centered):
+            freq = 0
+            amp  = x_0 - 1j*px_0
+            was_centered = True
+            
 
         # Saving results
         frequencies.append(freq)
@@ -90,27 +101,113 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
     return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
 
 
-def get_harmonics(x = None,px = None,y = None,py = None,zeta = None,pzeta = None,number_of_harmonics = 5,Hann_order = 1):
+def NAFF_real(x,number_of_harmonics = 5,Hann_order = 1):
     """
-    Computes the spectrum of a tracking data set for all canonical pairs provided
+    Applies the NAFF algorithm to find the spectral lines of a REAL signal.
     """
 
-    results = {}
-    for pair in [(x,px,'x'),(y,py,'y'),(zeta,pzeta,'zeta')]:
-        z,pz,plane = pair
+    assert number_of_harmonics >=1, 'number_of_harmonics needs to be > 1'
+    
+    # Converting to numpy arrays
+    x,px = np.array(x),0
+
+    # saving mean of the signal
+    x_0 = np.mean(x)
+    was_centered = False
+
+    # initialisation
+    z  = x - 1j*px
+    N  = np.arange(len(x))
+    
+    
+    frequencies = []
+    amplitudes  = [] 
+    for _ in range(number_of_harmonics):
+
+        # Computing frequency and amplitude
+        freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
+
+        # Saving results (amplitude is doubled to account for the complex conjugate)
+        if freq < 0:
+            frequencies.append(-freq)
+            amplitudes.append(2*np.conjugate(amp))
+        else:
+            frequencies.append(freq)
+            amplitudes.append(2*amp)
+
+        # Substraction procedure
+        zgs  = amp * np.exp(2 * np.pi * 1j * freq * N)
         
-        if z is not None:
-            if pz is None:
-                pz = np.zeros(len(z))
+        # Frequency close to 0 -> DC part of the signal, force freq to 0 and amp to real
+        if (np.abs(freq) < 1e-10) and (not was_centered):
+            frequencies[-1] = 0
+            amplitudes[-1]  = x_0 + 0*1j
+            z   -= amp
+        else:
+            # Real signal comes in pairs of complex conjugates
+            z   -= zgs + np.conjugate(zgs)
+        x,px = np.real(z), 0
 
-            # Computing spectral lines
-            df = NAFF(z,pz, number_of_harmonics = number_of_harmonics,
+    
+    return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
+
+
+def get_tune(x,px=None,Hann_order = 1):
+    """
+    Computes the tune of a canonical pair.
+    ----------------------------------------------------
+    """
+
+    # Converting to numpy arrays
+    if px is not None:
+        x,px = np.array(x),np.array(px)
+    else:
+        x,px = np.array(x),0
+
+    # initialisation
+    z  = x - 1j*px
+    N  = np.arange(len(x))
+    
+    # Computing frequency and amplitude
+    freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
+    
+    return np.abs(freq)
+
+
+
+def get_spectrum(u=None,pu=None,x = None,px = None,y = None,py = None,zeta = None,pzeta = None,number_of_harmonics = 5,Hann_order = 1):
+    """
+    Computes the spectrum of a tracking data set for all canonical pairs provided.
+    ----------------------------------------------------
+    u,pu -> generic coordinates, returns single spectrum
+    (x,px),(y,py),(zeta,pzeta) -> canonical pairs, returns dictionary of spectra
+    """
+
+    if u is not None:
+        if pu is None:
+            df = NAFF_real(u,   number_of_harmonics = number_of_harmonics,
+                                Hann_order          = Hann_order)
+        else:
+            df = NAFF(u,pu, number_of_harmonics = number_of_harmonics,
                                 Hann_order      = Hann_order)
             
-            results[plane] = df
+        return df
 
-        else:
-            results[plane] = None
+    else:
 
+        results = {}
+        for pair in [(x,px,'x'),(y,py,'y'),(zeta,pzeta,'zeta')]:
+            u,pu,plane = pair
+            
+            if u is not None:
+                if pu is None:
+                    df = NAFF_real(u,   number_of_harmonics = number_of_harmonics,
+                                        Hann_order          = Hann_order)
+                else:
+                    df = NAFF(u,pu, number_of_harmonics = number_of_harmonics,
+                                        Hann_order      = Hann_order)
+                results[plane] = df
+            else:
+                results[plane] = None
 
     return results
