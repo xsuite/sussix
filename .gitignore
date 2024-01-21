@@ -10,3 +10,4 @@
 *.pyd
 *.egg-info/
 *cpython*
+*.tar.*
