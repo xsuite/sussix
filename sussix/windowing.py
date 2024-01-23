@@ -33,7 +33,7 @@ def hann(N,order=1):
     """
     # Initialisation
     #---------------
-    Nt = np.max(N)
+    Nt = np.max(N)+1
     p  = order
     #---------------
     
@@ -42,4 +42,6 @@ def hann(N,order=1):
     else:
         center = Nt//2
     return (2**p)*math.factorial(p)**2/(math.factorial(2*p)) * (1+np.cos(2*np.pi*(N-center)/Nt))**(p)
+
+
 
