@@ -1,33 +1,43 @@
 import numpy as np
-import pandas as pd
 
-from .windowing import Hann
+from .windowing import hann
 from .optimise import newton_method
 
 
-def FFT_tune_estimate(z,n_forced = None):
+
+def _fft_f0_estimate(z,force_len = None):
     """
-    Estimate the tune using an FFT. The signal is cropped to the closest power of 2 for improved accuracy.
-    ----------------------------------------------------
-        z        : complex array of the signal
-        n_forced : number of turns to use for the FFT. if > len(z), the signal is padded with zeros
-    ----------------------------------------------------
+    Estimate the main frequency using an FFT. The signal is cropped to the closest power 
+    of 2 for improved accuracy.
+
+    Parameters
+    ----------
+    z : numpy.ndarray
+        Complex array of the signal.
+    n_forced : int, optional
+        Number of turns to use for the FFT. If > len(z), the signal is padded 
+        with zeros. Defaults to None.
+
+    Returns
+    -------
+    tuple of float
+        A tuple containing the estimated tune and the resolution.
     """
     # Cropping signal to closest power of 2
-    if n_forced is None:
-        n_forced = 2**int(np.log2(len(z)))
+    if force_len is None:
+        force_len = 2**int(np.log2(len(z)))
 
     # Search for maximum in Fourier spectrum
-    z_spectrum = np.fft.fft(z,n=n_forced)
+    z_spectrum = np.fft.fft(z,n=force_len)
     idx_max    = np.argmax(np.abs(z_spectrum))
     
     # Estimation of Tune with FFT
-    tune_est   = idx_max/n_forced
-    resolution = 1/n_forced
+    tune_est   = idx_max/force_len
+    resolution = 1/force_len
 
     return tune_est,resolution
 
-def fundamental_frequency(x,px,Hann_order = 1):
+def fundamental_frequency(z,N = None,window_order = 1,window_type = 'hann'):
     """
     Subroutine of the NAFF algorithm. 
     1. Applies a Hann window
@@ -36,57 +46,52 @@ def fundamental_frequency(x,px,Hann_order = 1):
     4. Returns the main frequency and the amplitude.
     """
 
+    # Initialisation
+    #---------------------
+    if N is None:
+        N = np.arange(len(z))
+    #---------------------
+
     # Windowing of the signal
-    N   = np.arange(len(x))
-    z   = np.array(x) - 1j*np.array(px)
-    z_w = z * Hann(N, Nt=len(z),p=Hann_order)
-    
-    # Estimation of the tune with FFT
-    tune_est,resolution = FFT_tune_estimate(z_w)
+    #---------------------
+    window_fun = {'hann':hann}[window_type.lower()]
+    z_w = z * window_fun(N,order=window_order)
+    #---------------------
+
+    # Estimation of the main frequency with an FFT
+    f0_est,resolution = _fft_f0_estimate(z_w)
 
     # Preparing the estimate for the Newton refinement method
-    if tune_est >= 0.5:
-        tune_est = -(1.0 - tune_est)
-    tune_est = tune_est - resolution
+    if f0_est >= 0.5:
+        f0_est = -(1.0 - f0_est)
+    f0_est = f0_est - resolution
 
     # Refinement of the tune calulation
-    tune,amplitude = newton_method(z_w,N,tune_est,resolution)
+    tune,amplitude = newton_method(z_w,N,freq_estimate = f0_est,resolution = resolution)
 
     return tune,amplitude
 
 
-def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
+def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = False):
     """
     Applies the NAFF algorithm to find the spectral lines of a signal.
     """
 
-    assert number_of_harmonics >=1, 'number_of_harmonics needs to be > 1'
+    assert num_harmonics >=1, 'number_of_harmonics needs to be >= 1'
     
-    # Converting to numpy arrays
-    x,px = np.array(x),np.array(px)
-
-    # saving mean of the signal
-    x_0,px_0     = np.mean(x),np.mean(px)
-    was_centered = False
-
     # initialisation
-    z  = x - 1j*px
-    N  = np.arange(len(x))
-    
-    
+    #---------------------
+    N  = np.arange(len(z))
+    #---------------------
+
+
     frequencies = []
     amplitudes  = [] 
-    for _ in range(number_of_harmonics):
+    for _ in range(num_harmonics):
 
         # Computing frequency and amplitude
-        freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
-
-        # Frequency close to 0 -> DC part of the signal, force to mean and 0 freq (only once)
-        if (np.abs(freq) < 1e-10) and (not was_centered):
-            freq = 0
-            amp  = x_0 - 1j*px_0
-            was_centered = True
-            
+        freq,amp  = fundamental_frequency(z,N=N,window_order= window_order,
+                                                window_type = window_type)
 
         # Saving results
         frequencies.append(freq)
@@ -95,119 +100,70 @@ def NAFF(x,px,number_of_harmonics = 5,Hann_order = 1):
         # Substraction procedure
         zgs  = amp * np.exp(2 * np.pi * 1j * freq * N)
         z   -= zgs
-        x,px = np.real(z), -np.imag(z)
 
-    
-    return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
-
-
-def NAFF_real(x,number_of_harmonics = 5,Hann_order = 1):
-    """
-    Applies the NAFF algorithm to find the spectral lines of a REAL signal.
-    """
-
-    assert number_of_harmonics >=1, 'number_of_harmonics needs to be > 1'
-    
-    # Converting to numpy arrays
-    x,px = np.array(x),0
-
-    # saving mean of the signal
-    x_0 = np.mean(x)
-    was_centered = False
-
-    # initialisation
-    z  = x - 1j*px
-    N  = np.arange(len(x))
-    
-    
-    frequencies = []
-    amplitudes  = [] 
-    for _ in range(number_of_harmonics):
-
-        # Computing frequency and amplitude
-        freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
-
-        # Saving results (amplitude is doubled to account for the complex conjugate)
-        if freq < 0:
-            frequencies.append(-freq)
-            amplitudes.append(2*np.conjugate(amp))
-        else:
-            frequencies.append(freq)
-            amplitudes.append(2*amp)
-
-        # Substraction procedure
-        zgs  = amp * np.exp(2 * np.pi * 1j * freq * N)
-        
-        # Frequency close to 0 -> DC part of the signal, force freq to 0 and amp to real
-        if (np.abs(freq) < 1e-10) and (not was_centered):
-            frequencies[-1] = 0
-            amplitudes[-1]  = x_0 + 0*1j
-            z   -= amp
-        else:
-            # Real signal comes in pairs of complex conjugates
-            z   -= zgs + np.conjugate(zgs)
-        x,px = np.real(z), 0
-
-    
-    return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
-
-
-def get_tune(x,px=None,Hann_order = 1):
-    """
-    Computes the tune of a canonical pair.
-    ----------------------------------------------------
-    """
-
-    # Converting to numpy arrays
-    if px is not None:
-        x,px = np.array(x),np.array(px)
+    if to_pandas:
+        import pandas as pd
+        return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
     else:
-        x,px = np.array(x),0
+        return np.array(frequencies),np.array(amplitudes)
+
+
+def tune(x,px=None,window_order = 1,window_type = 'hann'):
 
     # initialisation
-    z  = x - 1j*px
-    N  = np.arange(len(x))
-    
-    # Computing frequency and amplitude
-    freq,amp  = fundamental_frequency(x,px,Hann_order=Hann_order)
+    #---------------------
+    if px is not None:
+        x,px = np.asarray(x),np.asarray(px)
+        z  = x - 1j*px
+    else:
+        if np.any(np.imag(np.asarray(x)) != 0):
+            # x is complex! 
+            z = x
+        else:
+            x,px = np.asarray(x),0
+            z  = x - 1j*px
+    N  = np.arange(len(z))
+    #---------------------
+
+    freq,amp  = fundamental_frequency(z,N=N,window_order= window_order,
+                                            window_type = window_type)
     
     return np.abs(freq)
 
 
-
-def get_spectrum(u=None,pu=None,x = None,px = None,y = None,py = None,zeta = None,pzeta = None,number_of_harmonics = 5,Hann_order = 1):
-    """
-    Computes the spectrum of a tracking data set for all canonical pairs provided.
-    ----------------------------------------------------
-    u,pu -> generic coordinates, returns single spectrum
-    (x,px),(y,py),(zeta,pzeta) -> canonical pairs, returns dictionary of spectra
-    """
-
-    if u is not None:
-        if pu is None:
-            df = NAFF_real(u,   number_of_harmonics = number_of_harmonics,
-                                Hann_order          = Hann_order)
-        else:
-            df = NAFF(u,pu, number_of_harmonics = number_of_harmonics,
-                                Hann_order      = Hann_order)
-            
-        return df
-
+def harmonics(x,px = None,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = False):
+    # initialisation
+    #---------------------
+    if px is not None:
+        real_signal = False
+        x,px = np.asarray(x),np.asarray(px)
+        z  = x - 1j*px
     else:
-
-        results = {}
-        for pair in [(x,px,'x'),(y,py,'y'),(zeta,pzeta,'zeta')]:
-            u,pu,plane = pair
+        if np.any(np.imag(np.asarray(x)) != 0):
+            real_signal = False
+            z = x
+        else:
+            real_signal = True
+            x,px = np.asarray(x),0
+            z  = x - 1j*px
+    #---------------------
             
-            if u is not None:
-                if pu is None:
-                    df = NAFF_real(u,   number_of_harmonics = number_of_harmonics,
-                                        Hann_order          = Hann_order)
-                else:
-                    df = NAFF(u,pu, number_of_harmonics = number_of_harmonics,
-                                        Hann_order      = Hann_order)
-                results[plane] = df
-            else:
-                results[plane] = None
 
-    return results
+    # FOR COMPLEX SIGNAL:
+    #---------------------
+    if not real_signal:
+        return naff(z,  num_harmonics = num_harmonics,
+                        window_order = window_order,
+                        window_type = window_type,
+                        to_pandas = to_pandas)
+    
+    # # FOR REAL SIGNAL:
+    # #---------------------
+    # else:
+
+
+    # # return naff(x,px,num_harmonics = num_harmonics,window_order = window_order,window_type = window_type,to_pandas = to_pandas)
+
+
+
+

@@ -3,16 +3,40 @@ import math
 
 
 
-def Hann(N,Nt = None,p=1):
+def hann(N,order=1):
     """
-    Hann's window, centered at the middle of the dataset.
-    ----------------------------------------------------
-        N : index of the turn
-        Nt: total number of turns
-    ----------------------------------------------------
+    Generates Hann's window, centered at the middle of the dataset. 
+    Hann's window is used to smooth data and reduce spectral leakage.
+
+    Parameters
+    ----------
+    N : numpy.ndarray or similar
+        Index array of the turn. Each element represents a specific turn for which 
+        the window value is calculated.
+    Nt : int, optional
+        Total number of turns. If not provided, it is determined as the maximum 
+        value in N. Defaults to None.
+    p : int, optional
+        The power to which the Hann function is raised. Defaults to 1.
+
+    Returns
+    -------
+    numpy.ndarray
+        The Hann window values for each turn index in N. The window is centered 
+        around the middle of the dataset.
+
+    Notes
+    -----
+    The formula used for the Hann window is:
+    (2^p)*math.factorial(p)^2 / (math.factorial(2*p)) * (1 + cos(2*pi*(N-center)/Nt))^p
+    where 'center' is calculated based on the parity of Nt.
     """
-    if Nt is None:
-        Nt = np.max(N)
+    # Initialisation
+    #---------------
+    Nt = np.max(N)
+    p  = order
+    #---------------
+    
     if np.mod(Nt,2) == 0:
         center = Nt//2 - 1
     else:
