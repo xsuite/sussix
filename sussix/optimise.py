@@ -43,7 +43,7 @@ def laskar_dfft(freq,N,z):
 
 def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
 
-    # Legacy of SUSSIX optimization
+    # Legacy of SUSSIX optimization procedure
     #---------------------------------------
     level1_num_steps = 10
     level2_num_steps = 100
@@ -111,4 +111,4 @@ def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
     idx_max = np.argmax(amp_found)
     frequency   = freq_found[idx_max]
     amplitude,_ = laskar_dfft(frequency,N,z)
-    return frequency,amplitude
+    return amplitude,frequency

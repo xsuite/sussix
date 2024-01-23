@@ -2,6 +2,7 @@ import numpy as np
 
 from .windowing import hann
 from .optimise import newton_method
+from .toolbox import parse_real_signal
 
 
 
@@ -67,9 +68,9 @@ def fundamental_frequency(z,N = None,window_order = 1,window_type = 'hann'):
     f0_est = f0_est - resolution
 
     # Refinement of the tune calulation
-    tune,amplitude = newton_method(z_w,N,freq_estimate = f0_est,resolution = resolution)
+    amplitude,f0 = newton_method(z_w,N,freq_estimate = f0_est,resolution = resolution)
 
-    return tune,amplitude
+    return amplitude,f0
 
 
 def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = False):
@@ -90,7 +91,7 @@ def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = F
     for _ in range(num_harmonics):
 
         # Computing frequency and amplitude
-        freq,amp  = fundamental_frequency(z,N=N,window_order= window_order,
+        amp,freq  = fundamental_frequency(z,N=N,window_order= window_order,
                                                 window_type = window_type)
 
         # Saving results
@@ -105,7 +106,7 @@ def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = F
         import pandas as pd
         return pd.DataFrame({'amplitude':amplitudes,'frequency':frequencies})
     else:
-        return np.array(frequencies),np.array(amplitudes)
+        return np.array(amplitudes),np.array(frequencies)
 
 
 def tune(x,px=None,window_order = 1,window_type = 'hann'):
@@ -125,7 +126,7 @@ def tune(x,px=None,window_order = 1,window_type = 'hann'):
     N  = np.arange(len(z))
     #---------------------
 
-    freq,amp  = fundamental_frequency(z,N=N,window_order= window_order,
+    amp,freq  = fundamental_frequency(z,N=N,window_order= window_order,
                                             window_type = window_type)
     
     return np.abs(freq)
@@ -157,12 +158,18 @@ def harmonics(x,px = None,num_harmonics = 1,window_order = 1,window_type = 'hann
                         window_type = window_type,
                         to_pandas = to_pandas)
     
-    # # FOR REAL SIGNAL:
-    # #---------------------
-    # else:
+    # FOR REAL SIGNAL:
+    #---------------------
+    else:
+        # Looking for twice as many frequencies then parsing the complex conjugates
+        amplitudes,frequencies = naff(z, num_harmonics = 2*num_harmonics,
+                                        window_order = window_order,
+                                        window_type = window_type)
+        
+        return parse_real_signal(amplitudes,frequencies,to_pandas=to_pandas)
 
 
-    # # return naff(x,px,num_harmonics = num_harmonics,window_order = window_order,window_type = window_type,to_pandas = to_pandas)
+
 
 
 
