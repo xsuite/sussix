@@ -104,7 +104,7 @@ def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
 
             
             freq_found.append(freq3)
-            amp_found.append(dfft)
+            amp_found.append(np.abs(dfft))
             
         root1, droot1 = root2, droot2
 
