@@ -41,12 +41,8 @@ def laskar_dfft(freq,N,z):
     return _dfft,_dfft_derivative
 
 
-def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
+def newton_method(z,N,freq_estimate,resolution,tol = 1e-10,num_macro_iterations = 10,num_micro_iterations = 100):
 
-    # Legacy of SUSSIX optimization procedure
-    #---------------------------------------
-    level1_num_steps = 10
-    level2_num_steps = 100
 
     # Increase resolution by factor 5
     resolution = resolution/5  
@@ -69,7 +65,7 @@ def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
     root2 = 0
     droot2 = 0
     
-    for _ in range(level1_num_steps):
+    for _ in range(num_macro_iterations):
         root2 = root1+resolution
 
         dfft,dfft_d  = laskar_dfft(root2,N,z)
@@ -80,7 +76,7 @@ def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
             freq1, freq2, dfreq1, dfreq2 = root1, root2, droot1, droot2
 
             
-            for __ in range(level2_num_steps):
+            for __ in range(num_micro_iterations):
                 ratio = -dfreq1 / dfreq2 if abs(dfreq2) > 0 else 0.0
 
                 freq3 = (freq1 + ratio * freq2) / (1.0 + ratio)
@@ -108,7 +104,11 @@ def newton_method(z,N,freq_estimate,resolution,tol = 1e-10):
             
         root1, droot1 = root2, droot2
 
-    idx_max = np.argmax(amp_found)
-    frequency   = freq_found[idx_max]
-    amplitude,_ = laskar_dfft(frequency,N,z)
-    return amplitude,frequency
+    if len(amp_found) == 0:
+        # No frequency found! (For accelerator physics, should never happen outside of chaotic layers)
+        return np.nan + 1j*np.nan, np.nan
+    else:
+        idx_max = np.argmax(amp_found)
+        frequency   = freq_found[idx_max]
+        amplitude,_ = laskar_dfft(frequency,N,z)
+        return amplitude,frequency

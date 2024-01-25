@@ -171,6 +171,19 @@ def harmonics(x,px = None,num_harmonics = 1,window_order = 1,window_type = 'hann
 
 
 
+def multiparticle_tunes(x,px=None,window_order = 1,window_type = 'hann'):
+
+    # Initializating px
+    #--------------------
+    if px is None:
+        px = 2*len(x[:,0])*[None]
+    #--------------------
+
+    freq_i  = np.empty_like(x[:,0], dtype=np.float64)    
+    for ii in range(len(x)):
+        freq_i[ii] = tune(x[ii],px[ii],window_order = window_order,window_type = window_type)
+    
+    return freq_i
 
 
 

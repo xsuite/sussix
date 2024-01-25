@@ -102,3 +102,27 @@ def generate_signal(amplitudes,frequencies,N):
     px = -signal.imag
 
     return x,px
+
+
+def generate_pure_KAM(amplitudes,jklm,fundamental_tunes,N,return_frequencies=False):
+    """
+    Generate a signal with the provided amplitudes and frequencies over turns N.
+    """
+
+    if isinstance(amplitudes,(float,int)):
+        amplitudes = [amplitudes]
+    if isinstance(jklm,(float,int)):
+        jklm = [jklm]
+
+    assert len(amplitudes) == len(jklm), "amplitudes and jklm must have the same length"
+
+    # Generating the signal
+    Q1,Q2,Q3 = fundamental_tunes
+    signal = sum([A*np.exp(2 * np.pi * 1j * (j*Q1 + k*Q2 + l*Q3 + m) * N) for A,(j,k,l,m) in zip(amplitudes,jklm)])
+    x  =  signal.real
+    px = -signal.imag
+
+    if return_frequencies:
+        return x,px,[j*Q1 + k*Q2 + l*Q3 + m for (j,k,l,m) in jklm]
+    else:
+        return x,px
