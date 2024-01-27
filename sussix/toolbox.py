@@ -48,40 +48,51 @@ def parse_real_signal(amplitudes,frequencies,conjugate_tol=1e-10,to_pandas = Fal
     
 
 
-def find_linear_combinations(frequencies,fundamental_tunes = [],max_jklm = 10,to_pandas = False):
+def find_linear_combinations(frequencies,fundamental_tunes = [],max_harmonic_order = 10,to_pandas = False):
     """
     Categorisation of resonances. Returns the linear combinations of the fundamental tunes that are closest to the provided frequencies.
     This should be called after get_harmonics to have a list of frequencies.
     """
 
-    assert len(fundamental_tunes) == 3, "Need 3 fundamental tunes"
+    assert len(fundamental_tunes) in [1,2,3], "need 1, 2 or 3 fundamental tunes (2D,4D,6D)"
 
-    # Create a 3D array of all possible combinations of j, k, l
-    j,k,l,m = np.mgrid[-max_jklm:max_jklm+1, -max_jklm:max_jklm+1,-max_jklm:max_jklm+1,-max_jklm:max_jklm+1]
+    # Create a 3D array of all possible combinations of r_vec
+    idx = max_harmonic_order
+    if len(fundamental_tunes) == 1:
+        r1,r2       = np.mgrid[-idx:idx+1, -idx:idx+1]
+        r_vec       = [r1,r2]
+    elif len(fundamental_tunes) == 2:
+        r1,r2,r3    = np.mgrid[-idx:idx+1, -idx:idx+1,-idx:idx+1]
+        r_vec       = [r1,r2,r3]
+    else:
+        r1,r2,r3,r4 = np.mgrid[-idx:idx+1, -idx:idx+1,-idx:idx+1,-idx:idx+1]
+        r_vec       = [r1,r2,r3,r4]
 
-    # nu = j*Q_x + k*Q_y + l*Q_z + m
-    all_combinations = j * fundamental_tunes[0] + k * fundamental_tunes[1] + l * fundamental_tunes[2] + m
+
+    # Computing all linear combinations of r1*Qx + r2*Qy + r3*Qz + m
+    Q_vec = fundamental_tunes + [1]
+    all_combinations    = sum([_r*_Q for _r,_Q in zip(r_vec,Q_vec)])
     
     # Find the closest combination for each frequency
-    jklm = []
+    r_values = []
     err = []
     for freq in frequencies:
 
         # Find the index of the closest combination
         closest_idx = np.unravel_index(np.argmin(np.abs(freq - all_combinations)), all_combinations.shape)
 
-        # Get the corresponding values for l, j, k
-        closest_combination = (j[closest_idx], k[closest_idx], l[closest_idx],m[closest_idx])
+        # Get the corresponding values for r1,r2,r3,r4
+        closest_combination = tuple(_r[closest_idx] for _r in r_vec)
         closest_value = all_combinations[closest_idx]
 
-        jklm.append(closest_combination)
+        r_values.append(closest_combination)
         err.append(np.abs(closest_value-freq))
 
     if to_pandas:
         import pandas as pd
-        return pd.DataFrame({'jklm':jklm,'err':err,'freq':frequencies})
+        return pd.DataFrame({'resonance':r_values,'err':err,'freq':frequencies})
     else:
-        return np.array(jklm),np.array(err),np.array(frequencies)
+        return np.array(r_values),np.array(err),np.array(frequencies)
 
 
 
