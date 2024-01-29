@@ -1,7 +1,7 @@
 import numpy as np
 
 from .windowing import hann
-from .optimise import newton_method
+from .optimize import newton_method
 from .toolbox import parse_real_signal
 
 
@@ -80,9 +80,10 @@ def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = F
 
     assert num_harmonics >=1, 'number_of_harmonics needs to be >= 1'
     
-    # initialisation
+    # initialisation, creating a copy of the signal since we'll modify it
     #---------------------
     N  = np.arange(len(z))
+    _z = z.copy()
     #---------------------
 
 
@@ -91,7 +92,7 @@ def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = F
     for _ in range(num_harmonics):
 
         # Computing frequency and amplitude
-        amp,freq  = fundamental_frequency(z,N=N,window_order= window_order,
+        amp,freq  = fundamental_frequency(_z,N=N,window_order= window_order,
                                                 window_type = window_type)
 
         # Saving results
@@ -100,7 +101,7 @@ def naff(z,num_harmonics = 1,window_order = 1,window_type = 'hann',to_pandas = F
 
         # Substraction procedure
         zgs  = amp * np.exp(2 * np.pi * 1j * freq * N)
-        z   -= zgs
+        _z   -= zgs
 
     if to_pandas:
         import pandas as pd
@@ -173,14 +174,16 @@ def harmonics(x,px = None,num_harmonics = 1,window_order = 1,window_type = 'hann
 
 def multiparticle_tunes(x,px=None,window_order = 1,window_type = 'hann'):
 
+    n_particles = np.shape(x)[0]
+
     # Initializating px
     #--------------------
     if px is None:
-        px = 2*len(x[:,0])*[None]
+        px = n_particles*[None]
     #--------------------
 
-    freq_i  = np.empty_like(x[:,0], dtype=np.float64)    
-    for ii in range(len(x)):
+    freq_i  = np.zeros(np.shape(x)[0])
+    for ii in range(n_particles):
         freq_i[ii] = tune(x[ii],px[ii],window_order = window_order,window_type = window_type)
     
     return freq_i

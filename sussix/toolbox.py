@@ -1,8 +1,20 @@
 import numpy as np
 
 
+#---------------------------------------
+def henon_map(x,px,Q,n_turns):
+    z_vec = np.nan*np.ones(n_turns) + 1j*np.nan*np.ones(n_turns)
+    z_vec[0] = x - 1j*px
+    for ii in range(n_turns-1):
+        _z = z_vec[ii]
+
+        z_vec[ii+1] =  np.exp(2*np.pi*1j* Q ) * (_z-1j/4 * (_z + np.conjugate(_z))**2)
+    return np.real(z_vec),-np.imag(z_vec)
+#---------------------------------------
 
 
+
+#---------------------------------------
 def parse_real_signal(amplitudes,frequencies,conjugate_tol=1e-10,to_pandas = False):
     
     A,Q = amplitudes,frequencies
@@ -45,9 +57,11 @@ def parse_real_signal(amplitudes,frequencies,conjugate_tol=1e-10,to_pandas = Fal
         return pd.DataFrame({'amplitude':amp,'frequency':freq})
     else:
         return np.array(amp),np.array(freq)
-    
+#--------------------------------------- 
 
 
+
+#---------------------------------------
 def find_linear_combinations(frequencies,fundamental_tunes = [],max_harmonic_order = 10,to_pandas = False):
     """
     Categorisation of resonances. Returns the linear combinations of the fundamental tunes that are closest to the provided frequencies.
@@ -92,10 +106,10 @@ def find_linear_combinations(frequencies,fundamental_tunes = [],max_harmonic_ord
         import pandas as pd
         return pd.DataFrame({'resonance':r_values,'err':err,'freq':frequencies})
     else:
-        return np.array(r_values),np.array(err),np.array(frequencies)
+        return [tuple(_r) for _r in r_values],np.array(err),np.array(frequencies)
+#---------------------------------------
 
-
-
+#---------------------------------------
 def generate_signal(amplitudes,frequencies,N):
     """
     Generate a signal with the provided amplitudes and frequencies over turns N.
@@ -113,8 +127,10 @@ def generate_signal(amplitudes,frequencies,N):
     px = -signal.imag
 
     return x,px
+#---------------------------------------
 
 
+#---------------------------------------
 def generate_pure_KAM(amplitudes,jklm,fundamental_tunes,N,return_frequencies=False):
     """
     Generate a signal with the provided amplitudes and frequencies over turns N.
@@ -137,3 +153,4 @@ def generate_pure_KAM(amplitudes,jklm,fundamental_tunes,N,return_frequencies=Fal
         return x,px,[j*Q1 + k*Q2 + l*Q3 + m for (j,k,l,m) in jklm]
     else:
         return x,px
+#---------------------------------------

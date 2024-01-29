@@ -42,12 +42,3 @@ def get_tunes_all(x, N=1, order=2, interpolation=0):
     A = amplitudes
     return Q, A
 
-
-
-# def multiparticle_tunes(x, order=2, interpolation=0):   
-#     assert interpolation == 0, "DEPRECATED: interpolation is no longer supported"
-
-#     q_i = np.empty_like(x[:,0], dtype=np.float64)
-#     for ii in range(len(x)):
-#         q_i[ii] = get_tune(x[ii], order, interpolation)
-#     return q_i
